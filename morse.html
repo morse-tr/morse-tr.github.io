@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>مترجم شفرة مورس</title>
+<style>
+:root{--bg:#f6f4ef;--card:#fff;--text:#1d1d1b;--muted:#6b6a65;--accent:#c2410c;--line:#ddd9cf;--field:#faf9f5;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#161615;--card:#212120;--text:#eeece6;--muted:#a09e96;--accent:#fb923c;--line:#3a3a37;--field:#1a1a19;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#161615;--card:#212120;--text:#eeece6;--muted:#a09e96;--accent:#fb923c;--line:#3a3a37;--field:#1a1a19;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:"Segoe UI",Tahoma,"Noto Naskh Arabic",Arial,sans-serif;line-height:1.6}
+main{max-width:680px;margin:0 auto;padding:20px 16px 40px}
+h1{font-size:1.5rem;margin:8px 0 4px}
+p.sub{margin:0 0 16px;color:var(--muted);font-size:.95rem}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px}
+.tabs{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+button{font:inherit;cursor:pointer;border-radius:10px;border:1px solid var(--line);background:var(--field);color:var(--text);padding:8px 14px}
+button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+button:active{transform:scale(.97)}
+label{display:block;font-size:.85rem;color:var(--muted);margin:10px 0 4px}
+textarea{width:100%;min-height:110px;border-radius:10px;border:1px solid var(--line);background:var(--field);color:var(--text);padding:10px;font:inherit;font-size:1.05rem;resize:vertical}
+#out{font-family:ui-monospace,Consolas,monospace;font-size:1.3rem;letter-spacing:2px;direction:ltr;text-align:left;word-break:break-word}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px}
+input[type=range]{flex:1;min-width:120px;accent-color:var(--accent)}
+.hint{font-size:.85rem;color:var(--muted);margin-top:8px}
+.top{display:flex;justify-content:flex-start;direction:ltr}
+.tbl{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:6px;direction:ltr}
+.tbl div{border:1px solid var(--line);border-radius:8px;padding:4px 8px;font-family:ui-monospace,Consolas,monospace;font-size:.85rem;background:var(--field);text-align:center}
+.tbl b{display:block;font-family:"Segoe UI",Tahoma,Arial,sans-serif;font-size:1rem}
+details summary{cursor:pointer;font-weight:600}
+</style>
+</head>
+<body>
+<main>
+<div class="top"><button id="langBtn">English</button></div>
+<h1>مترجم شفرة مورس</h1>
+<p class="sub">حوّل النص إلى مورس أو العكس، بالعربي والإنجليزي، مع صوت للتشغيل.</p>
+
+<div class="card">
+  <div class="tabs">
+    <button id="t1" class="on">نص ← مورس</button>
+    <button id="t2">مورس ← نص</button>
+  </div>
+  <div id="langRow" class="tabs" style="display:none">
+    <button id="lAr" class="on">فك بالعربي</button>
+    <button id="lEn">فك بالإنجليزي</button>
+  </div>
+  <label id="inLbl" for="inp">اكتب النص هنا</label>
+  <textarea id="inp" placeholder="مثال: مرحبا أو HELLO"></textarea>
+  <label>النتيجة</label>
+  <textarea id="out" readonly></textarea>
+  <div class="row">
+    <button id="play">▶ تشغيل الصوت</button>
+    <button id="stop">■ إيقاف</button>
+    <button id="copy">نسخ النتيجة</button>
+    <button id="swap">⇅ تبديل</button>
+  </div>
+  <div class="row"><span style="font-size:.85rem;color:var(--muted)">السرعة</span><input id="spd" type="range" min="50" max="200" value="100"></div>
+  <p class="hint" id="hint">في مورس: افصل بين الحروف بمسافة، وبين الكلمات بشرطة مائلة /</p>
+</div>
+
+<div class="card">
+  <details><summary>جدول الحروف</summary>
+    <p class="hint">الإنجليزي</p><div class="tbl" id="tEn"></div>
+    <p class="hint">العربي</p><div class="tbl" id="tAr"></div>
+  </details>
+</div>
+</main>
+<script>
+var EN={A:".-",B:"-...",C:"-.-.",D:"-..",E:".",F:"..-.",G:"--.",H:"....",I:"..",J:".---",K:"-.-",L:".-..",M:"--",N:"-.",O:"---",P:".--.",Q:"--.-",R:".-.",S:"...",T:"-",U:"..-",V:"...-",W:".--",X:"-..-",Y:"-.--",Z:"--..",
+0:"-----",1:".----",2:"..---",3:"...--",4:"....-",5:".....",6:"-....",7:"--...",8:"---..",9:"----.",
+".":".-.-.-",",":"--..--","?":"..--..","!":"-.-.--","'":".----.","/":"-..-.","(":"-.--.",")":"-.--.-","&":".-...",":":"---...",";":"-.-.-.","=":"-...-","+":".-.-.","-":"-....-","_":"..--.-",'"':".-..-.","@":".--.-."};
+var AR={"ا":".-","ب":"-...","ت":"-","ث":"-.-.","ج":".---","ح":"....","خ":"---","د":"-..","ذ":"--..","ر":".-.","ز":"---.","س":"...","ش":"----","ص":"-..-","ض":"...-","ط":"..-","ظ":"-.--","ع":".-.-","غ":"--.","ف":"..-.","ق":"--.-","ك":"-.-","ل":".-..","م":"--","ن":"-.","ه":"..-..","و":".--","ي":".."};
+var NORM={"أ":"ا","إ":"ا","آ":"ا","ى":"ي","ة":"ه","ؤ":"و","ئ":"ي","پ":"ب","گ":"ك"};
+var ENREV={},ARREV={};
+for(var k in EN)ENREV[EN[k]]=k;
+for(var k in AR)ARREV[AR[k]]=k;
+// digits and punctuation also decode in Arabic mode
+for(var k in EN)if(!/[A-Z]/.test(k))ARREV[EN[k]]=k;
+
+var mode=1,dec="ar",lang="ar",ctx=null,stopFlag=false;
+var $=function(i){return document.getElementById(i)};
+
+function enc(t){
+  var words=t.trim().split(/\s+/),res=[];
+  words.forEach(function(w){
+    var cs=[];
+    for(var i=0;i<w.length;i++){
+      var c=w[i];c=NORM[c]||c;
+      var u=c.toUpperCase();
+      if(EN[u])cs.push(EN[u]);else if(AR[c])cs.push(AR[c]);
+    }
+    if(cs.length)res.push(cs.join(" "));
+  });
+  return res.join(" / ");
+}
+function decode(m){
+  var rev=dec==="ar"?ARREV:ENREV;
+  m=m.replace(/[·•]/g,".").replace(/[−–—_]/g,"-");
+  return m.trim().split(/\s*\/\s*|\s{3,}|\n+/).map(function(w){
+    return w.trim().split(/\s+/).map(function(c){return c?(rev[c]||(lang==="ar"?"؟":"?")):""}).join("");
+  }).join(" ");
+}
+function update(){
+  var v=$("inp").value;
+  $("out").value=!v.trim()?"":(mode===1?enc(v):decode(v));
+  var rtl=mode===2&&dec==="ar";
+  $("out").style.direction=rtl?"rtl":"ltr";
+  $("out").style.textAlign=rtl?"right":"left";
+  $("out").style.fontFamily=mode===1?"":"inherit";
+}
+function setMode(m){
+  mode=m;
+  $("t1").className=m===1?"on":"";$("t2").className=m===2?"on":"";
+  $("langRow").style.display=m===2?"flex":"none";
+  var s=T[lang];
+  $("inLbl").textContent=m===1?s.in1:s.in2;
+  $("inp").placeholder=m===1?s.ph1:".... . .-.. .-.. ---";
+  $("hint").textContent=m===1?s.h1:s.h2;
+  update();
+}
+$("t1").onclick=function(){setMode(1)};
+$("t2").onclick=function(){setMode(2)};
+$("lAr").onclick=function(){dec="ar";$("lAr").className="on";$("lEn").className="";update()};
+$("lEn").onclick=function(){dec="en";$("lEn").className="on";$("lAr").className="";update()};
+$("inp").oninput=update;
+$("swap").onclick=function(){
+  var o=$("out").value;
+  $("inp").value=o;
+  setMode(mode===1?2:1);
+};
+$("copy").onclick=function(){
+  var o=$("out").value;
+  if(!o)return;
+  var done=function(){$("copy").textContent=T[lang].copied;setTimeout(function(){$("copy").textContent=T[lang].copy},1400)};
+  try{navigator.clipboard.writeText(o).then(done,function(){$("out").select();document.execCommand("copy");done()})}
+  catch(e){$("out").select();document.execCommand("copy");done()}
+};
+function morseOf(){return mode===1?$("out").value:$("inp").value}
+$("play").onclick=function(){
+  var m=morseOf().replace(/[·•]/g,".").replace(/[−–—_]/g,"-");
+  if(!m.trim())return;
+  try{ctx=ctx||new (window.AudioContext||window.webkitAudioContext)()}catch(e){return}
+  if(ctx.state==="suspended")ctx.resume();
+  var unit=0.08*100/$("spd").value,t=ctx.currentTime+0.1;
+  var osc=ctx.createOscillator(),g=ctx.createGain();
+  osc.frequency.value=620;osc.connect(g);g.connect(ctx.destination);g.gain.setValueAtTime(0,t);
+  for(var i=0;i<m.length;i++){
+    var c=m[i];
+    if(c==="."||c==="-"){
+      var d=c==="."?unit:unit*3;
+      g.gain.setValueAtTime(0.25,t);g.gain.setValueAtTime(0,t+d);t+=d+unit;
+    }else if(c==="/"){t+=unit*4}
+    else if(c===" "){t+=unit*2}
+  }
+  osc.start();osc.stop(t+0.1);
+  window._osc=osc;
+};
+$("stop").onclick=function(){try{window._osc&&window._osc.stop()}catch(e){}};
+var AN={"ا":"Alif","ب":"Ba","ت":"Ta","ث":"Tha","ج":"Jim","ح":"Ha","خ":"Kha","د":"Dal","ذ":"Thal","ر":"Ra","ز":"Zay","س":"Sin","ش":"Shin","ص":"Sad","ض":"Dad","ط":"Tah","ظ":"Zah","ع":"Ain","غ":"Ghain","ف":"Fa","ق":"Qaf","ك":"Kaf","ل":"Lam","م":"Mim","ن":"Nun","ه":"Heh","و":"Waw","ي":"Ya"};
+function fill(id,map){
+  var h="";for(var k in map){
+    var n=(id==="tAr"&&lang==="en")?"<small style='display:block;color:var(--muted);font-family:Arial,sans-serif'>"+AN[k]+"</small>":"";
+    h+="<div><b>"+k+"</b>"+n+map[k]+"</div>";
+  }
+  $(id).innerHTML=h;
+}
+var onlyLetters={};for(var k in EN)if(/[A-Z0-9]/.test(k))onlyLetters[k]=EN[k];
+fill("tEn",onlyLetters);fill("tAr",AR);
+var T={
+ar:{title:"مترجم شفرة مورس",sub:"حوّل النص إلى مورس أو العكس، بالعربي والإنجليزي، مع صوت للتشغيل.",res:"النتيجة",spd:"السرعة",play:"▶ تشغيل الصوت",stop:"■ إيقاف",copy:"نسخ النتيجة",copied:"تم النسخ ✓",swap:"⇅ تبديل",t1:"نص ← مورس",t2:"مورس ← نص",lAr:"فك بالعربي",lEn:"فك بالإنجليزي",sum:"جدول الحروف",e:"الإنجليزي",a:"العربي",btn:"English",in1:"اكتب النص هنا",in2:"اكتب شفرة مورس هنا (نقط وشرط)",ph1:"مثال: مرحبا أو HELLO",h1:"بتتحول الحروف العربي والإنجليزي والأرقام وعلامات الترقيم.",h2:"افصل بين الحروف بمسافة، وبين الكلمات بشرطة مائلة / أو ٣ مسافات."},
+en:{title:"Morse Code Translator",sub:"Convert text to Morse or back, in Arabic and English, with sound playback.",res:"Result",spd:"Speed",play:"▶ Play sound",stop:"■ Stop",copy:"Copy result",copied:"Copied ✓",swap:"⇅ Swap",t1:"Text → Morse",t2:"Morse → Text",lAr:"Decode as Arabic",lEn:"Decode as English",sum:"Letter chart",e:"English",a:"Arabic",btn:"عربي",in1:"Type your text here",in2:"Type Morse code here (dots and dashes)",ph1:"Example: HELLO",h1:"Arabic and English letters, numbers and punctuation are converted.",h2:"Separate letters with a space and words with / or 3 spaces."}};
+function applyLang(){
+  var s=T[lang],q=function(x){return document.querySelector(x)};
+  document.documentElement.lang=lang;document.documentElement.dir=lang==="ar"?"rtl":"ltr";
+  document.title=s.title;q("h1").textContent=s.title;q(".sub").textContent=s.sub;
+  document.querySelectorAll("label")[1].textContent=s.res;
+  $("spd").previousElementSibling.textContent=s.spd;
+  $("play").textContent=s.play;$("stop").textContent=s.stop;$("copy").textContent=s.copy;$("swap").textContent=s.swap;
+  $("t1").textContent=s.t1;$("t2").textContent=s.t2;$("lAr").textContent=s.lAr;$("lEn").textContent=s.lEn;
+  q("details summary").textContent=s.sum;
+  var hs=document.querySelectorAll("details .hint");hs[0].textContent=s.e;hs[1].textContent=s.a;
+  $("langBtn").textContent=s.btn;
+  fill("tAr",AR);
+  setMode(mode);
+}
+$("langBtn").onclick=function(){lang=lang==="ar"?"en":"ar";applyLang()};
+</script>
+</body>
+</html>
